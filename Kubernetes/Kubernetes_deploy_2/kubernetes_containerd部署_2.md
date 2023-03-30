@@ -117,7 +117,9 @@ net.bridge.bridge-nf-call-ip6tables = 1
 [root@kube-master ~]# sysctl --system
 ```
 
+
     - 加载方法2:
+
 
 ```shell
 [root@kube-master ~]# sysctl -p
