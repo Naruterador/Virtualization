@@ -263,6 +263,10 @@ kube-node2.skills.com    NotReady   <none>                 40s    v1.23.5
 [root@kube-master kubecon]# kubectl apply -f kube-flannel.yml 
 ```
  - 其中kube-flannel.yml文件可以去官网直接下载
+ - 也可以使用calio作为网络插件，执行以下指令部署calico网络插件
+ ```shell
+ [root@kube-master kubecon]# kubectl apply -f calico.yaml
+ ```
  - 加载完成后我们再查看集群各节点状态:
 
 ```shell
