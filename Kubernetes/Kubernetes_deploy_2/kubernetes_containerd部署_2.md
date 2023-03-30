@@ -139,6 +139,7 @@ containerd.io-1.5.10-3.1.el8.x86_64.rpm
 
  - 编辑/etc/containerd/config.toml配置文件
    - 注释掉这一行systemd_cgroup = false 在前面添加#systemd_cgroup = false
+   - 修改sandbox_image = "k8s.gcr.io/pause:3.7"，将pause版本改为当前使用的版本
    - 启动和设置开机自启containerd
 
 ```shell
