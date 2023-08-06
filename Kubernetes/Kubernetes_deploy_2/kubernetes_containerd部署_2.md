@@ -239,6 +239,14 @@ ctr -n k8s.io i import flannel.tar    #pod内部的网络插件
 ctr -n k8s.io i import flannelcni.tar #pod内部的网络插件
 重新启动所有节点，用来让所有配置生效(关闭swap,关闭selinux等)
 ```
+- CoreDNS（Core Domain Name System）是 Kubernetes 集群中默认的 DNS（Domain Name System）插件，它在 Kubernetes 网络中扮演着非常重要的角色。它的作用如下：
+  - DNS 解析：CoreDNS 负责为 Kubernetes 集群内的各种服务和 Pod 提供 DNS 解析服务。每个运行的 Pod 和 Service 在集群中都被分配了一个唯一的 DNS 名称，其他 Pod 和 Service 可以使用这些 DNS 名称来进行服务发现和通信。通过 CoreDNS，Kubernetes 中的应用程序可以使用有意义的 DNS 名称而不是直接使用 IP 地址。
+  - 服务发现：CoreDNS 使得服务发现更加简单。当一个 Pod 被创建或删除时，CoreDNS 会自动更新 DNS 记录，确保其他应用程序可以发现并连接到新的或删除的服务。
+  - 域名重写：CoreDNS 支持域名重写，可以根据规则将请求转发到不同的后端服务。这在某些特定的场景下很有用，比如将某些域名请求转发到外部服务或其它集群中的服务。
+  - 服务负载均衡：当一个 Service 对应多个 Pod 时，CoreDNS 可以提供基于 Round Robin 的负载均衡。这样来自同一个 Service 的 DNS 请求将会在多个 Pod 之间分布，从而实现请求的负载均衡。
+  - 插件化架构：CoreDNS 采用了插件化架构，这意味着它可以轻松地扩展和定制。用户可以通过添加、删除或配置插件来修改其行为，以适应不同的需求。
+- 总体来说，CoreDNS 在 Kubernetes 中提供了一个重要的基础设施，使得容器之间的通信和服务发现变得更加简单和高效。它确保了 Kubernetes 集群内部的 DNS 解析和服务发现的可靠性和稳定性。
+
 # **前面这些操作在所有节点上要做！**
 
 
