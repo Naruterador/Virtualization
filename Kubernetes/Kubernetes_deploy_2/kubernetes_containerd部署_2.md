@@ -81,6 +81,12 @@ Rocky Linux release 8.5 (Green Obsidian)
               total        used        free      shared  buff/cache   available
               Mem:        3825584      179508     3422976        8760      223100     3417568
 ```
+- 为什么需要关闭Swap分区
+  - 性能：Kubernetes是一个高度依赖内存的分布式系统，它要求节点上的容器和组件具有良好的内存性能。当系统的内存不足时，Linux会使用Swap分区作为虚拟内存来临时存储不活跃的内存页。然而，Swap分区的性能远远不及物理内存，使用Swap可能导致应用程序和容器性能下降。
+  - 不可预测的行为：当系统开始使用Swap分区时，由于Swap速度较慢，可能会导致容器和应用程序的响应时间增加，甚至可能导致容器无法启动或执行异常。这会导致不可预测的行为，影响Kubernetes集群的稳定性和可靠性。
+  - OOM（Out of Memory）管理：在Kubernetes中，内存资源不足时，Kubernetes通过OOM Killer来终止占用大量内存的进程，以保护系统免受内存耗尽的影响。但是，当Swap分区启用时，OOM Killer可能会表现出不可预测的行为，导致不恰当的进程被终止。
+  - 容器限制：Kubernetes中的容器资源限制通常只限制内存和CPU资源，而不包括Swap分区。因此，如果Swap分区开启，容器可能会继续使用Swap，而不受资源限制的约束，这可能会导致资源分配不均衡。
+  - 因此，为了保证Kubernetes集群的性能、稳定性和可靠性，关闭Swap分区通常是推荐的做法。
 
 ##### 1.7 修改linux的内核参数
 
@@ -96,7 +102,18 @@ EOF
 
 ```shell
 [root@kube-master ~]# modprobe overlay
+
+#modprobe overlay命令用于加载Linux内核中的"overlay"模块。在容器技术中，overlay是一种联合文件系统（UnionFS），它允许将多个文件系统以层叠的方式合并在一起，创建一个统一的文件系统视图。
+#在Docker和其他容器化平台中，overlay文件系统被广泛用于实现镜像层叠和容器的文件系统隔离。当你运行Docker容器时，每个容器都有自己的文件系统，该文件系统是由底层镜像和一系列读写层组成的。overlay技术使得这些层能够被有效地组合在一起，提供了轻量、高效的容器文件系统。
+#通过运行modprobe overlay命令，Linux内核加载overlay模块，使得容器运行时能够使用overlay文件系统功能。这通常在系统启动时自动完成，以便在容器化平台启动时可以正常使用overlay技术。
+
 [root@kube-master ~]# modprobe br_netfilter
+
+#modprobe br_netfilter命令用于加载Linux内核中的"br_netfilter"模块。该模块主要用于支持Linux桥接设备（bridge device）与网络过滤器（netfilter）的结合。
+
+#Linux桥接设备允许将多个网络接口连接在一起，形成一个本地区域网络（LAN），这样连接到不同网络接口的设备可以相互通信。而netfilter是Linux内核中的网络过滤器框架，它用于处理网络数据包的流量控制、防火墙规则和网络地址转换等。
+
+#当你在Linux系统中使用Docker或其他容器化平台时，通常会自动启用br_netfilter模块，因为它在容器网络的实现中扮演着重要角色。在容器网络中，需要使用桥接设备来实现容器与主机或其他容器之间的通信，而br_netfilter模块则确保了容器网络中的网络过滤和安全功能能够正常工作。
 ```
    - 查看网桥过滤模块是否加载成功
 
@@ -116,6 +133,15 @@ net.bridge.bridge-nf-call-ip6tables = 1
 ```shell
 [root@kube-master ~]# sysctl --system
 ```
+- 配置以上网络参数的作用:
+  - net.bridge.bridge-nf-call-iptables = 1:
+    - 该参数的目的是启用Linux桥接模块的iptables钩子功能。在Kubernetes集群中，网络流量通常通过Linux桥接设备进行转发。启用此选项可以确保桥接设备能够正确地处理与iptables相关的网络流量，从而允许Kubernetes网络插件（如Calico、Flannel等）能够在节点之间正确地进行网络通信和策略实施。如果未启用此选项，可能会导致网络插件无法正常工作，从而影响Pod之间的通信。
+  - net.ipv4.ip_forward = 1:
+    - 该参数允许Linux内核在不同网络接口之间转发IP数据包。在Kubernetes集群中，通常有多个节点之间需要进行网络通信，例如，当Pod从一个节点迁移到另一个节点时，需要确保数据包能够正确地在节点之间转发。启用此选项允许Linux内核执行IP数据包的转发功能，确保在Kubernetes集群中的节点之间能够正确地进行网络通信。
+  - net.bridge.bridge-nf-call-ip6tables = 1:
+    - 类似于第一个参数，此参数的作用是启用Linux桥接模块的ip6tables钩子功能。这对于IPv6网络流量的处理是必要的，以确保Kubernetes网络插件能够正确处理IPv6数据包。
+  - 这些参数在部署Kubernetes集群时需要配置，以确保网络功能正常运行，并允许Pod在节点之间进行通信和迁移。如果在部署过程中未配置这些参数，可能会导致网络问题，影响集群的稳定性和性能。
+
 
 
     - 加载方法2:
@@ -173,6 +199,11 @@ socat-1.7.4.1-1.el8.x86_64.rpm
 ```shell
 [root@kube-master ~]# dnf install kube*
 ```
+  - 在部署 Kubernetes 时，KUBELET_CGROUP_ARGS="--cgroup-driver=systemd" 是 kubelet 组件的一个参数配置，用于指定 kubelet 如何管理容器的 cgroup（控制组）。
+    - Cgroups 是 Linux 内核提供的一个功能，用于对进程进行资源隔离和限制，以确保不同进程或容器之间的资源不会相互干扰。在 Kubernetes 中，kubelet 负责管理节点上的容器，包括创建、监视和销毁容器。
+    - 该参数的含义是将 kubelet 的 cgroup 驱动设置为 systemd。这意味着 kubelet 将使用 systemd 的 cgroup 驱动来管理容器的资源限制和隔离。使用 systemd cgroup 驱动是为了与系统中已经存在的 systemd 进程管理器集成，以确保容器的 cgroup 限制与宿主机上其他 systemd 服务的 cgroup 限制一致，从而更好地管理系统资源和避免冲突。
+    - 需要注意的是，cgroup 驱动的选择取决于宿主机的配置和操作系统版本。在一些较新的 Linux 发行版中，systemd cgroup 驱动可能是默认的选项。但在一些老版本或特定配置的系统中，可能需要手动指定 cgroup 驱动为 systemd。
+    - 总结起来，KUBELET_CGROUP_ARGS="--cgroup-driver=systemd" 这个参数的作用是让 kubelet 使用 systemd 的 cgroup 驱动来管理容器的资源限制和隔离，以确保与系统中其他 systemd 服务的 cgroup 配置一致性。
   - 配置kubelet的cgroup
    - 编辑/etc/sysconfig/kubelet, 删除原有内容,添加下面的配置
 
@@ -184,7 +215,7 @@ KUBELET_CGROUP_ARGS="--cgroup-driver=systemd"
 ```shell
 [root@kube-master ~]# systemctl enable kubelet
 ```
-   - 安装iproute-tc,如果不安装会在初始化的时候显示如下警告
+   - 安装iproute-tc,如果不安装会在初始化的时候显示如下警告(有些系统不会有这个错误)
 
 ```shell
 [prefLight] WARNING: tc not found in system path
@@ -280,6 +311,9 @@ kube-node2.skills.com    Ready    <none>                 5m32s   v1.23.5
 ```
 **可以看到已经显示为Ready了，到这里我们的kubernetes集群就搭建好了**
 
+##### 1.14使用Calio部署网络插件
+- 需要修改calio.yaml配置文件中的image名称
+- 余下部署方式和使用flannel类似，这里就不一一列出了
 
 ##### 1.13 ipvs部署
 - 在Kubernetes中Service有两种带来模型，一种是基于iptables的，一种是基于ipvs的两者比较的话，ipvs的性能明显要高一些，但是如果要使用它，需要手动载入ipvs模块
@@ -323,8 +357,6 @@ kube-proxy-cthmc                 1/1     Running   0          16m
 # 5.然后使用ipvsadm命令查看是否成功
 [root@master ~]# ipvsadm -ln    #有输出表示成功切换为ipvs
 ```
-
-
 
 ##### 1.14 集群测试
 - 创建一个nginx服务
