@@ -261,6 +261,7 @@ ctr -n k8s.io i import flannelcni.tar #pod内部的网络插件
 	--service-cidr=10.96.0.0/12 \                    #集群网段
 	--pod-network-cidr=10.244.0.0/16                 #pod内部通信网段
 	--cri-socket=/run/containerd/containerd.sock     #使用containerd作为集群镜像启动器
+  --image-repository=registry.aliyuncs.com/google_containers     #指定k8s容器下载路径，默认为google,这里指定为了阿里云
 	--ignore-preflight-errors=all                    #跳过所有错误
 ```
 - 创建必要文件
