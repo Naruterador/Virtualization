@@ -1,4 +1,5 @@
 #### 1.环境初始化
+- 在配置环境时，一定要配置网关-否则可能造成网络插件无法启用
 ##### 1.1 检查操作系统的版本
 - 本次安装kubernetes集群使用的版本是Rocky Linux release 8.5
 
@@ -256,13 +257,13 @@ ctr -n k8s.io i import flannelcni.tar #pod内部的网络插件
 
 ```shell
 [root@master ~]# kubeadm init \
-	--apiserver-advertise-address=192.168.107.161 \  #master节点地址
-	--kubernetes-version=v1.23.5 \                   #kubernetes版本
-	--service-cidr=10.96.0.0/12 \                    #集群网段
-	--pod-network-cidr=10.244.0.0/16                 #pod内部通信网段
-	--cri-socket=/run/containerd/containerd.sock     #使用containerd作为集群镜像启动器
-  --image-repository=registry.aliyuncs.com/google_containers     #指定k8s容器下载路径，默认为google,这里指定为了阿里云
-	--ignore-preflight-errors=all                    #跳过所有错误
+	--apiserver-advertise-address=192.168.107.161 \                #master节点地址
+	--kubernetes-version=v1.23.5 \                                 #kubernetes版本
+	--service-cidr=10.96.0.0/12 \                                  #集群网段
+	--pod-network-cidr=10.244.0.0/16                               #pod内部通信网段
+	--cri-socket=/run/containerd/containerd.sock                   #使用containerd作为集群镜像启动器
+        --image-repository=registry.aliyuncs.com/google_containers     #指定k8s容器下载路径，默认为google,这里指定为了阿里云
+	--ignore-preflight-errors=all                                  #跳过所有错误
 ```
 - 创建必要文件
 
