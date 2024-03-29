@@ -42,6 +42,7 @@ TCP  10.97.97.97:80 rr
 
 - ipvs 模式
  - ipvs模式和iptables类似，kube-proxy监控Pod的变化并创建相应的ipvs规则。ipvs相对iptables转发效率更高。除此以外，ipvs支持更多的LB算法。
+
 ![img](../pics/image-20200509153731363.png)
 
 ```shell
